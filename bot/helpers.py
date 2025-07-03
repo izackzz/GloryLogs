@@ -5,23 +5,32 @@ from bot.config import *
 
 
 def load_users() -> dict[int, dict]:
-    """Carrega o CSV de usuários, criando-o se não existir."""
+    """Carrega o CSV de usuários, criando-o se não existir e tratando novos campos."""
     users: dict[int, dict] = {}
     if not os.path.exists(USERS_CSV):
         with open(USERS_CSV, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
             writer.writeheader()
-        return users  # retorna dict vazio
+        return users
 
     with open(USERS_CSV, "r", newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             uid = int(row["user"])
+            # Define valores padrão para os novos campos se eles não existirem (compatibilidade)
+            row.setdefault("daily_limit", "100")
+            row.setdefault("searches_today", "0")
+            row.setdefault("last_search_date", "")
+            
+            # Converte para os tipos corretos
+            row["daily_limit"] = int(row["daily_limit"])
+            row["searches_today"] = int(row["searches_today"])
+            
             users[uid] = row
     return users
 
 def save_users(users: dict[int, dict]) -> None:
-    """Salva o dicionário de usuários de volta no CSV."""
+    """Salva o dicionário de usuários de volta no CSV com todos os campos."""
     with open(USERS_CSV, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
         writer.writeheader()
@@ -31,6 +40,10 @@ def save_users(users: dict[int, dict]) -> None:
                 "registration-date": rec["registration-date"],
                 "end-date":          rec["end-date"],
                 "premium":           rec["premium"],
+                # Garante que os novos campos existam ao salvar
+                "daily_limit":       rec.get("daily_limit", 99999),
+                "searches_today":    rec.get("searches_today", 0),
+                "last_search_date":  rec.get("last_search_date", ""),
             })
 
 USERS = load_users()
@@ -185,3 +198,72 @@ def parse_all_buttons(command_text: str) -> InlineKeyboardMarkup | None:
         if cells:
             rows.append(cells)
     return InlineKeyboardMarkup(rows) if rows else None
+
+# ---------- NOVAS FUNÇÕES PARA O SISTEMA DE CONVITES ---------- #
+
+def generate_invite_code(length: int = 8) -> str:
+    """Gera um código de convite alfanumérico aleatório."""
+    alphabet = string.ascii_letters + string.digits
+    return ''.join(secrets.choice(alphabet) for _ in range(length))
+
+def load_invites() -> dict[str, dict]:
+    """Carrega o CSV de convites, criando-o se não existir."""
+    invites: dict[str, dict] = {}
+    if not os.path.exists(INVITES_CSV):
+        with open(INVITES_CSV, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=INVITE_FIELDNAMES)
+            writer.writeheader()
+        return invites
+
+    with open(INVITES_CSV, "r", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            # Converte os valores numéricos para o tipo correto
+            row['days'] = int(row['days'])
+            row['limit'] = int(row['limit'])
+            row['used'] = int(row['used'])
+            invites[row["code"]] = row
+    return invites
+
+def save_invites(invites: dict[str, dict]) -> None:
+    """Salva o dicionário de convites de volta no CSV."""
+    with open(INVITES_CSV, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=INVITE_FIELDNAMES)
+        writer.writeheader()
+        for code, data in invites.items():
+            writer.writerow(data)
+
+# Carrega os convites na inicialização do bot
+INVITES = load_invites()
+
+# ---------- LIMITE DIÁRIO DE BUSCAS ---------- #
+
+def check_and_reset_search_limit(user_id: int) -> bool:
+    """
+    Verifica se o usuário pode realizar uma busca.
+    Reseta a contagem se for um novo dia.
+    Retorna True se a busca for permitida, False caso contrário.
+    """
+    # Admin não tem limite
+    if user_id == ADMIN_USER_ID:
+        return True
+    
+    rec = USERS.get(user_id)
+    # Se não for premium ou não tiver registro, não aplica limite (outras verificações já barram)
+    if not rec or not is_user_premium(user_id):
+        return True
+
+    today_str = datetime.now(timezone.utc).date().isoformat()
+    last_search_date = rec.get("last_search_date", "")
+
+    # Se a última busca foi em um dia diferente, reseta a contagem
+    if last_search_date != today_str:
+        rec["searches_today"] = 0
+        rec["last_search_date"] = today_str
+        # Não precisa salvar aqui, será salvo após a busca bem-sucedida
+
+    # Verifica se o limite foi atingido
+    if rec["searches_today"] >= rec["daily_limit"]:
+        return False  # Limite atingido
+
+    return True  # Busca permitida

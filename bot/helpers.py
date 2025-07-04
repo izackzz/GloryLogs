@@ -47,7 +47,6 @@ def save_users(users: dict[int, dict]) -> None:
             })
 
 USERS = load_users()
-save_users(USERS)
 
 def load_chats() -> set[int]:
     chats: set[int] = set()
@@ -240,19 +239,27 @@ INVITES = load_invites()
 
 def check_and_reset_search_limit(user_id: int) -> bool:
     """
-    Verifica se o usuário pode realizar uma busca.
-    Reseta a contagem se for um novo dia.
+    Verifica se o usuário pode realizar uma busca. Reseta a contagem se for um novo dia.
+    Agora também lida com usuários 'free' que não são premium.
     Retorna True se a busca for permitida, False caso contrário.
     """
     # Admin não tem limite
     if user_id == ADMIN_USER_ID:
         return True
     
-    rec = USERS.get(user_id)
-    # Se não for premium ou não tiver registro, não aplica limite (outras verificações já barram)
-    if not rec or not is_user_premium(user_id):
-        return True
+    # Se o usuário não existe no CSV, cria um registro temporário para o plano FREE
+    if user_id not in USERS:
+        USERS[user_id] = {
+            "user": str(user_id),
+            "registration-date": "N/A",
+            "end-date": "N/A",
+            "premium": "n",
+            "daily_limit": 3,  # Limite do plano FREE
+            "searches_today": 0,
+            "last_search_date": "",
+        }
 
+    rec = USERS[user_id]
     today_str = datetime.now(timezone.utc).date().isoformat()
     last_search_date = rec.get("last_search_date", "")
 
@@ -260,10 +267,35 @@ def check_and_reset_search_limit(user_id: int) -> bool:
     if last_search_date != today_str:
         rec["searches_today"] = 0
         rec["last_search_date"] = today_str
-        # Não precisa salvar aqui, será salvo após a busca bem-sucedida
 
     # Verifica se o limite foi atingido
-    if rec["searches_today"] >= rec["daily_limit"]:
+    if rec["searches_today"] >= rec.get("daily_limit", 3): # Usa 3 como fallback
         return False  # Limite atingido
 
     return True  # Busca permitida
+
+def get_plans_message_and_keyboard() -> tuple[str, InlineKeyboardMarkup]:
+    """
+    Monta e retorna a mensagem de texto e o teclado (botões) para a página de planos.
+    """
+    # Você pode personalizar esta mensagem com os detalhes dos seus planos
+    message_text = (
+        "<b>✨ Nossos Planos Premium ✨</b>\n\n"
+        "Desbloqueie todo o potencial do bot com acesso ilimitado e as melhores funcionalidades.\n\n"
+        "<b>Plano Mensal - R$ 25,00</b>\n"
+        "✓ Acesso completo por 30 dias\n"
+        "✓ Buscas diárias ilimitadas\n"
+        "✓ Resultados ilimitados por busca\n"
+        "✓ Suporte prioritário\n\n"
+        
+        "<b>Plano Trimestral - R$ 60,00</b> (Economize 20%!)\n"
+        "✓ Todos os benefícios do plano mensal\n"
+        "✓ Acesso garantido por 90 dias\n\n"
+        
+        "<blockquote>Para adquirir ou tirar dúvidas, fale com um administrador.</blockquote>"
+    )
+    
+    keyboard = [[InlineKeyboardButton("🛍️ Falar com Administrador", url="https://t.me/yMusashi")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    return message_text, reply_markup

@@ -31,6 +31,9 @@ async def handle_invitation(update: Update, context: ContextTypes.DEFAULT_TYPE, 
     now = datetime.now(timezone.utc)
     start_date = now.date()
     end_date = (now + timedelta(days=days)).date()
+    
+    print("")
+    print(f"\033[1;34m   ⟫  USER {user_id} JOIN WITH INVITE CODE {code}\033[m")
 
     USERS[user_id] = {
         "user": str(user_id),
@@ -49,9 +52,10 @@ async def handle_invitation(update: Update, context: ContextTypes.DEFAULT_TYPE, 
 
     # 6. Envia mensagem de boas-vindas
     mensagem = (
-        f"🎉 Parabéns, {user_name}!\n\n"
+        f"<blockquote>🎉 Parabéns, {user_name}</blockquote>!\n\n"
+        ""
         f"Sua assinatura premium foi ativada com sucesso por <b>{days} dias</b>.\n\n"
-        "Para começar, use o comando /search. Para ver todos os comandos, digite /help."
+        "Para começar, use o comando <b>/search</b>. Para ver todos os comandos, digite <b>/help</b>."
     )
     await update.message.reply_text(mensagem, parse_mode=ParseMode.HTML)
 #
@@ -105,32 +109,22 @@ async def invite_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     register_chat(update)
     user_id = update.effective_user.id
-    chat_id = update.effective_chat.id
 
-    # NOVO: Verifica se o /start contém um código de convite
+    # Verifica se o /start contém um código de convite
     if context.args and len(context.args) > 0:
         invitation_code = context.args[0]
         await handle_invitation(update, context, invitation_code)
-        return # Termina a execução aqui após tratar o convite
-
-    # Se não houver código de convite, continua o fluxo normal
-    print("")
-    print(f"\033[1;34m   ⟫  USER {user_id} STARTED A BOT\033[m")
-
-    if (
-        update.effective_user.id != ADMIN_USER_ID
-        and not is_user_premium(update.effective_user.id)
-        and not is_chat_premium(chat_id)
-    ):
-        await update.message.reply_text(
-            "❌ VOCÊ NÃO TEM PERMISSÃO SUFICIENTE PARA USAR ESSE BOT, ENTRE EM CONTATO COM @Prometheust"
-        )
         return
 
-    # resolve nome do usuário
+    # --- CORREÇÃO: Bloco de permissão removido ---
+    # O comando /start agora é aberto a todos. A permissão será
+    # verificada dentro de cada comando específico (ex: /search).
+
+    print(f"\033[1;34m   ⟫  USER {user_id} STARTED A BOT\033[m")
+
     user_name = update.effective_user.username or update.effective_user.first_name
 
-    # monta mensagem de boas-vindas
+    # Mensagem de boas-vindas (sem alterações)
     mensagem = (
         f"Olá {user_name}, seja bem-vindo!\n\n"
         "<blockquote>Sou o Bot de consultas 𝐆𝐋𝐎𝐑𝐘 𝐋𝐎𝐆𝐒 👁‍🗨!</blockquote>\n"
@@ -145,11 +139,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "📌 Exemplo: <code>/search intext:facebook inurl:login site:example.com</code>\n\n"
         "<blockquote>➡️ Use as setas de navegação para ver mais resultados.</blockquote>\n\n"
         "❓ Para ver todos os comandos disponíveis, digite /help\n\n"
-        ""
     )
-
     keyboard = [
-        # Linha 1: dois botões lado a lado
         [
             InlineKeyboardButton("ᴀᴅᴍɪɴ", url="https://t.me/Prometheust"),
             InlineKeyboardButton("ᴘʟᴀɴᴏꜱ", url="https://t.me/yMusashi"),
@@ -157,10 +148,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # captura o thread_id caso seja um tópico em grupo
     thread_id = getattr(update.effective_message, "message_thread_id", None)
 
-    # envia a foto no mesmo tópico/chat
     with open(banner_path, "rb") as photo_file:
         await context.bot.send_photo(
             chat_id=update.effective_chat.id,
@@ -169,7 +158,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
             caption=mensagem,
             parse_mode=ParseMode.HTML,
             reply_markup=reply_markup,
-        )#
+        )
 #
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     register_chat(update)
@@ -189,16 +178,16 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
 
     mensagem = (
-        "🎯 <b>Comandos Disponíveis:</b>\n\n"
-        "🔎 <b>/search &lt;sua_busca&gt;</b> - Realiza uma pesquisa nos logs.\n"
+        "<blockquote>🎯 <b>Comandos Disponíveis:</b></blockquote>\n\n"
+        "🔎 <b>/search</b> &lt;sua_busca&gt; - Realiza uma pesquisa nos logs.\n"
         "ℹ️ <b>/info</b> - Exibe informações sobre a base de dados.\n"
         "🗣️ <b>/profile</b> - Informações sobre seu plano e assinatura.\n\n"
         ""
         "📄 <b>Operadores de Busca Avançada:</b>\n"
-        "<code>inurl:</code> Busca na URL\n"
-        "<code>intext:</code> Busca no usuário e senha\n"
-        "<code>site:</code> Busca pelo domínio\n"
-        "<code>filetype:</code> Busca por extensão de arquivo\n\n"
+        "⁝⁝⁝ <code>inurl:</code> Busca na URL\n"
+        "⁝⁝⁝ <code>intext:</code> Busca no usuário e senha\n"
+        "⁝⁝⁝ <code>site:</code> Busca pelo domínio\n"
+        "⁝⁝⁝ <code>filetype:</code> Busca por extensão de arquivo\n\n"
         "📝 <b>Exemplo:</b> <code>/search intext:\"admin\" site:example.com</code>\n\n"
         "<blockquote>➡️ Use as setas de navegação para ver mais resultados durante a pesquisa.</blockquote>\n\n"
         "<blockquote>⏬🗂️ Faça download do resultado completo da busca.</blockquote>\n\n"
@@ -208,8 +197,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     keyboard = [
         # Linha 1: dois botões lado a lado
         [
-            InlineKeyboardButton("ᴀᴅᴍɪɴ", url="https://t.me/Prometheust"),
-            InlineKeyboardButton("ᴘʟᴀɴᴏꜱ", url="https://t.me/yMusashi"),
+            InlineKeyboardButton("ᴀᴅᴍɪɴ", url="https://t.me/yMusashi"),
+            InlineKeyboardButton("ᴘʟᴀɴᴏꜱ", callback_data="show_plans"),
         ],
         # # Linha 2: botão único (vertical)
         # [InlineKeyboardButton("📞 Suporte", url="https://t.me/SupportChat")],
@@ -327,9 +316,14 @@ async def add_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if update.effective_user.id != ADMIN_USER_ID:
         await update.message.reply_text("❌ Você não tem permissão para usar este comando.")
         return
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
 
     chat = update.effective_chat
     args = context.args or []
+    
+    print("")
+    print(f"\033[1;34m   ⟫  USER/GROUP {user_id} | {chat_id} ADDED TO PREMIUM\033[m")
     
     # Valor padrão do limite de buscas
     daily_limit = 99999  # Padrão "ilimitado" para adições manuais
@@ -392,40 +386,48 @@ async def add_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 #
 async def remove_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """/remove <user>  —  remove user do CSV (ou expira imediatamente)."""
-    user_id = update.effective_user.id
-    chat_id = update.effective_chat.id
-
-    print(f"\033[1;31m   ⟫  USER {user_id} REMOVED\033[m")
-
+    """/remove <user> — remove o premium de um usuário ou grupo."""
     if update.effective_user.id != ADMIN_USER_ID:
         await update.message.reply_text("❌ Você não tem permissão.")
         return
 
-    # 1) Resolver user_id via reply ou argumento
+    target_id_to_remove = None
+    chat_obj = None # NOVO: Variável para armazenar o objeto do alvo
+
+    # 1) Resolver o alvo via reply ou argumento
     if update.message.reply_to_message:
-        user_id = update.message.reply_to_message.from_user.id
+        target_id_to_remove = update.message.reply_to_message.from_user.id
+        # Para replies, assumimos que é um usuário
+        chat_obj = update.message.reply_to_message.from_user
     else:
         if not context.args:
             await update.message.reply_text("Uso: /remove <user_id|@username>")
             return
-        target = context.args[0]
+        target_arg = context.args[0]
         try:
-            chat_obj = await context.bot.get_chat(int(target)) if target.isdigit() else await context.bot.get_chat(target.lstrip("@"))
-            user_id = chat_obj.id
+            # MODIFICADO: Armazenamos o objeto retornado por get_chat
+            chat_obj = await context.bot.get_chat(int(target_arg)) if target_arg.isdigit() else await context.bot.get_chat(target_arg.lstrip("@"))
+            target_id_to_remove = chat_obj.id
         except Exception:
-            await update.message.reply_text(f"❌ Não encontrei o usuário `{target}`.")
+            await update.message.reply_text(f"❌ Não encontrei o usuário ou grupo `{target_arg}`.")
             return
 
-    if user_id not in USERS:
-        await update.message.reply_text(f"ℹ️ Usuário `{user_id}` não está registrado.")
+    print("")
+    print(f"\033[1;31m   ⟫  REMOVING {target_id_to_remove}\033[m")
+    
+    if target_id_to_remove not in USERS:
+        await update.message.reply_text(f"ℹ️ ID `{target_id_to_remove}` não possui uma assinatura ativa.")
         return
 
-    # opcional: expirar em vez de excluir, aqui vamos excluir
-    del USERS[user_id]
+    # Remove o alvo do dicionário
+    del USERS[target_id_to_remove]
     save_users(USERS)
-    await update.message.reply_text(f"✅ Usuário `{user_id}` removido da base.")
-#
+
+    # NOVO: Define o escopo (Usuário ou Grupo) para a mensagem de resposta
+    escopo = "Grupo" if chat_obj and chat_obj.type in ('group', 'supergroup') else "Usuário"
+    
+    # MODIFICADO: Usa a variável 'escopo' na mensagem final
+    await update.message.reply_text(f"✅ {escopo} `{target_id_to_remove}` removido da base de assinantes.")#
 async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Exibe um painel de ajuda completo exclusivo para o administrador."""
     # Etapa 1: Garante que apenas o administrador pode usar este comando
@@ -434,9 +436,10 @@ async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     # Etapa 2: Monta a mensagem de ajuda detalhada com formatação HTML
     admin_help_text = (
-        "<b>👨‍💻 Painel de Controle do Administrador</b>\n\n"
+        "<blockquote>👨‍💻 Painel de Controle do Administrador</blockquote>\n\n"
+        ""
         "Bem-vindo ao seu painel de controle. Aqui está um guia rápido sobre como gerenciar o bot:\n\n"
-        "<b>--- 👤 Gerenciamento de Acessos ---</b>\n\n"
+        "<b>⁝⁝⁝ 👤 Gerenciamento de Acessos ---</b>\n\n"
         "<code>/add &lt;ID|@user&gt; &lt;dias&gt; [limit:N]</code>\n"
         "↳ Adiciona um <b>usuário</b> premium. O limite de buscas diárias é opcional (padrão: ilimitado).\n"
         "<i>Ex: /add 123456 30 limit:100</i>\n\n"
@@ -447,16 +450,16 @@ async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         "<code>/remove &lt;ID|@user&gt;</code>\n"
         "↳ Remove o acesso premium de um usuário ou grupo. Você também pode responder a uma mensagem do usuário com /remove.\n\n"
 
-        "<b>--- 🎟️ Sistema de Convites ---</b>\n\n"
+        "<blockquote>⁝⁝⁝ 🎟️ Sistema de Convites ---</blockquote>\n\n"
         "<code>/invite &lt;dias&gt; max:&lt;usos&gt;</code>\n"
         "↳ Gera um link de convite único. Novos usuários que usarem o link receberão premium com duração definida e limite de buscas padrão (15/dia).\n"
         "<i>Ex: /invite 7 max:20</i> (cria um link para 20 pessoas com 7 dias de premium).\n\n"
 
-        "<b>--- 📢 Comunicação em Massa ---</b>\n\n"
+        "<blockquote>⁝⁝⁝ 📢 Comunicação em Massa ---</blockquote>\n\n"
         "<code>/all</code> (respondendo a uma mensagem)\n"
         "↳ Envia a mensagem respondida para <b>todos os chats</b> onde o bot já foi iniciado. Use para anúncios importantes.\n\n"
 
-        "<b>--- 🔍 Comandos Gerais (Visão do Usuário) ---</b>\n\n"
+        "<blockquote>⁝⁝⁝ 🔍 Comandos Gerais (Visão do Usuário) ---</blockquote>\n\n"
         "• <b>/search &lt;termo&gt;</b>: Realiza buscas na base de dados.\n"
         "• <b>/profile</b>: Exibe o status da assinatura e o uso diário de buscas.\n"
         "• <b>/info</b>: Mostra estatísticas da base de dados.\n"
@@ -468,135 +471,168 @@ async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     # Etapa 3: Envia a mensagem para o administrador
     await update.message.reply_text(admin_help_text, parse_mode=ParseMode.HTML)
 #
+# Em commands.py
+
+# Em commands.py
+
+async def enviar_pagina_free(
+    context: ContextTypes.DEFAULT_TYPE,
+    user_id: int,
+    total_original: int
+) -> None:
+    """
+    Formata e edita a mensagem de resultados para usuários do plano FREE.
+    Exibe no máximo 15 resultados e não tem botões de paginação.
+    """
+    estado     = userbot[user_id]
+    chat_id    = estado["chat_id"]
+    message_id = estado["message_id"]
+    resultados = estado["resultados"] # Já está limitado a 15
+
+    # Monta a mensagem com o cabeçalho específico do plano FREE
+    resposta = (
+        f"🔎 | SUA PESQUISA RETORNOU {total_original} RESULTADOS;\n"
+        f"📌 | EXIBINDO {len(resultados)}/{total_original} DO PLANO FREE:\n\n"
+    )
+    for linha in resultados:
+        partes = parse_line(linha)
+        if partes:
+            url, user, senha = partes
+            resposta += (
+                f"🧭: <code>{html.escape(url)}</code>\n"
+                f"👤: <code>{html.escape(user)}</code>\n"
+                f"🔑: <code>{html.escape(senha)}</code>\n-\n"
+            )
+        else:
+            resposta += f"{html.escape(linha)}\n-\n"
+
+    # Botões para o plano FREE (Download removido, incentivo para upgrade)
+    keyboard = [[InlineKeyboardButton("✨ Fazer Upgrade para Premium", callback_data="show_plans")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    try:
+        await context.bot.edit_message_text(
+            chat_id=chat_id,
+            message_id=message_id,
+            text=resposta,
+            reply_markup=reply_markup,
+            parse_mode=ParseMode.HTML,
+        )
+    except BadRequest as e:
+        if "Message is not modified" in str(e):
+            pass
+        else:
+            print(f"Erro ao editar mensagem (free): {e}")
+# 
 async def searchlogs(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handler do /search: só permite ADMIN ou premium, e respeita o limite de buscas."""
+    """Handler do /search que diferencia a lógica para planos Premium e Free."""
     register_chat(update)
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
-    id_to_check = update.effective_chat.id if update.effective_chat.type in ('group', 'supergroup') else user_id
+    id_to_check = chat_id if update.effective_chat.type in ('group', 'supergroup') else user_id
 
-    # 1) Controle de acesso: ADMIN sempre liberado; usuários comuns só se premium ativo
-    if user_id != ADMIN_USER_ID:
-        # tenta usar primeiro o chat-level, depois o user-level
-        record = USERS.get(chat_id) or USERS.get(user_id)
-        today = datetime.utcnow().date()
-
-        if not record:
-            await update.message.reply_text(
-                "❌ Você não tem permissão (não é premium)."
-            )
-            return
-
-        end_date = datetime.strptime(record["end-date"], "%Y-%m-%d").date()
-        if record["premium"] != "y" or end_date < today:
-            # expira
-            record["premium"] = "n"
-            save_users(USERS)
-            await update.message.reply_text("❌ Seu período premium expirou.")
-            return
-
-    # — extrai e valida termo de busca —
+    # Validação do termo de busca (feita antes para todos)
     search_query = " ".join(context.args).strip()
     if not search_query:
-        await update.message.reply_text(
-            "✅ Forneça um termo de pesquisa:\nEx: /search facebook"
-        )
+        await update.message.reply_text("✅ Forneça um termo de pesquisa.")
         return
 
-    # LÓGICA DE LIMITE DE BUSCAS
-    # Verifica o limite de buscas diárias
+    # --- LÓGICA DE CONTROLE DE ACESSO E LIMITE ---
+    is_premium = is_user_premium(id_to_check)
+
     if not check_and_reset_search_limit(id_to_check):
-        user_rec = USERS.get(id_to_check)
-        keyboard = [
-            # Linha 1: dois botões lado a lado
-                [
-                    InlineKeyboardButton("ᴀᴛᴜᴀʟɪᴢᴀʀ ᴘʟᴀɴᴏ", url="https://t.me/yMusashi"),
-                ]
-            ]
+        user_rec = USERS.get(id_to_check, {})
+        limit = user_rec.get('daily_limit', 3)
+        keyboard = [[InlineKeyboardButton("✨ Fazer Upgrade de Plano", url="https://t.me/yMusashi")]]
         await update.message.reply_text(
-            f"❌ Você atingiu seu limite de {user_rec['daily_limit']} buscas diárias em seu plano. Tente novamente amanhã, ou atualize seu plano caso precise de mais buscas.\n\n",
-            reply_markup = InlineKeyboardMarkup(keyboard)
-        )
-        return
-    # 2) Extrai o termo de busca
-    search_query = " ".join(context.args).strip()
-    if not search_query:
-        await update.message.reply_text(
-            "✅ Por favor, forneça um termo de pesquisa\nEx: /search youtube"
+            f"❌ Você atingiu seu limite de {limit} buscas diárias. Tente novamente amanhã ou faça um upgrade.",
+            reply_markup=InlineKeyboardMarkup(keyboard)
         )
         return
 
-    # 3) Varredura de arquivos (mantém sua lógica)
+    # Envia mensagem "Pesquisando..."
+    loading_message = await context.bot.send_message(
+        chat_id=chat_id,
+        text="🔍 Pesquisando, seja paciente..."
+    )
+
+    # --- LÓGICA DE BUSCA (comum a todos) ---
+    parsed_criteria = parse_search_query(search_query)
     resultados = []
-    
-    print("")
-    print(f"\033[1;34m   ⟫  USER {user_id} SEARCHED FOR '{search_query}'\033[m")
-    
-    
+    print(f"\033[1;34m   ⟫  USER {user_id} (Premium: {is_premium}) SEARCHED FOR '{search_query}'\033[m")
     for root, _, files in os.walk(dirzao):
         for file in files:
             if not file.endswith(".txt"):
                 continue
             path = os.path.join(root, file)
             try:
-                texto = open(path, "r", encoding="utf-8").read()
-            except UnicodeDecodeError:
-                try:
-                    texto = open(path, "r", encoding="latin-1").read()
-                except:
-                    continue
-            for linha in texto.splitlines():
-                partes = parse_line(linha)
-                if partes and line_matches_criteria(*partes, parse_search_query(search_query)):
-                    resultados.append(linha)
+                with open(path, "r", encoding="utf-8", errors="ignore") as f:
+                    for linha in f:
+                        partes = parse_line(linha)
+                        if partes and line_matches_criteria(*partes, parsed_criteria):
+                            resultados.append(linha.strip())
+            except Exception as e:
+                print(f"Erro ao processar o arquivo {path}: {e}")
+                continue
 
-    
+    # Incrementa a contagem de buscas do dia
     if USERS.get(id_to_check):
         USERS[id_to_check]["searches_today"] += 1
-        save_users(USERS) # Salva o estado atualizado
-        
-    # 4) Paginação e resposta
-    total = len(resultados)
-    if total == 0:
-        await update.message.reply_text(f"❌ Nenhum resultado encontrado para: {search_query}")
+        # Para usuários free, não salvamos no CSV, a alteração fica só na memória
+        if is_premium:
+            save_users(USERS)
+
+    # --- LÓGICA DE RESPOSTA (diferenciada por plano) ---
+    total_original = len(resultados)
+    if total_original == 0:
+        await context.bot.edit_message_text(
+            chat_id=loading_message.chat_id,
+            message_id=loading_message.message_id,
+            text=f"❌ Nenhum resultado encontrado para: {search_query}"
+        )
         return
 
-    # guarda também o thread_id do tópico (None fora de fórum)
     thread_id = getattr(update.effective_message, "message_thread_id", None)
-    userbot[user_id] = {
-        "termo":        search_query,
-        "offset":       0,
-        "resultados":   resultados,
-        "message_id":   None,
-        "chat_id":      chat_id,
-        "thread_id":    thread_id,
-    }
-    await enviar_pagina(update, context, user_id)
-#
+    
+    if is_premium:
+        # Lógica para usuários PREMIUM
+        userbot[user_id] = {
+            "termo": search_query, "offset": 0, "resultados": resultados,
+            "message_id": loading_message.message_id, "chat_id": chat_id, "thread_id": thread_id,
+        }
+        await enviar_pagina(update, context, user_id)
+    else:
+        # Lógica para usuários FREE
+        resultados_free = resultados[:15] # Limita a 15 resultados
+        userbot[user_id] = {
+            "termo": search_query, "offset": 0, "resultados": resultados_free,
+            "message_id": loading_message.message_id, "chat_id": chat_id, "thread_id": thread_id,
+        }
+        await enviar_pagina_free(context, user_id, total_original)#
 async def enviar_pagina(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
     user_id: int
 ) -> None:
     """
-    Envia ou edita a página de resultados, respeitando o tópico (thread) gravado
-    em userbot[user_id]['thread_id'].
+    Edita a mensagem de resultados.
     """
     estado     = userbot[user_id]
     chat_id    = estado["chat_id"]
-    thread_id  = estado.get("thread_id")
+    message_id = estado["message_id"]
+    # Pega o ID diretamente do estado
     resultados = estado["resultados"]
     offset     = estado["offset"]
     total      = len(resultados)
 
-    total_pages  = (total + 29) // 30
-    current_page = offset // 30 + 1
-    fim          = min(offset + 30, total)
-    mostrados    = resultados[offset:fim]
+    # Lógica para montar a mensagem de resposta (existente)
+    total_pages  = (len(estado["resultados"]) + 29) // 30
+    current_page = estado["offset"] // 30 + 1
+    fim          = min(estado["offset"] + 30, len(estado["resultados"]))
+    mostrados    = estado["resultados"][estado["offset"]:fim]
 
     resposta = (
-        f"<i>🔎 | SUA PESQUISA RETORNOU {total} RESULTADOS TOTAIS, "
-        f"EXIBINDO ({current_page}/{total_pages}):</i>\n\n"
+        f"<blockquote>🔎 | SUA PESQUISA RETORNOU {total} RESULTADOS, EXIBINDO ({current_page}/{total_pages}):</blockquote>\n\n"
     )
     for linha in mostrados:
         partes = parse_line(linha)
@@ -610,33 +646,34 @@ async def enviar_pagina(
         else:
             resposta += f"{html.escape(linha)}\n-\n"
 
-    # monta navegação + download
-    keyboard = []
+    # Monta navegação + download (lógica existente)
+    keyboard_buttons = []
+    nav_row = []
     if current_page > 1:
-        keyboard.append(InlineKeyboardButton("⬅ --- ᴘʀᴇᴠ", callback_data="prev"))
+        nav_row.append(InlineKeyboardButton("⬅ --- ᴘʀᴇᴠ", callback_data="prev"))
     if current_page < total_pages:
-        keyboard.append(InlineKeyboardButton("ɴᴇxᴛ --- ➡", callback_data="next"))
-    keyboard.append(InlineKeyboardButton("⏬🗂️", callback_data="download"))
-    reply_markup = InlineKeyboardMarkup([keyboard])
+        nav_row.append(InlineKeyboardButton("ɴᴇxᴛ --- ➡", callback_data="next"))
+    
+    if nav_row:
+        keyboard_buttons.append(nav_row)
+    
+    keyboard_buttons.append([InlineKeyboardButton("⏬🗂️", callback_data="download")])
+    reply_markup = InlineKeyboardMarkup(keyboard_buttons)
 
-    if estado["message_id"] is None:
-        sent = await context.bot.send_message(
-            chat_id=chat_id,
-            message_thread_id=thread_id,
-            text=resposta,
-            reply_markup=reply_markup,
-            parse_mode=ParseMode.HTML,
-        )
-        estado["message_id"] = sent.message_id
-    else:
-        # edição sem tratar BadRequest explicitamente
+    # --- LÓGICA DE EDIÇÃO CORRIGIDA ---
+    try:
         await context.bot.edit_message_text(
             chat_id=chat_id,
-            message_id=estado["message_id"],
+            message_id=message_id,
             text=resposta,
             reply_markup=reply_markup,
             parse_mode=ParseMode.HTML,
         )
+    except BadRequest as e:
+        if "Message is not modified" in str(e):
+            pass
+        else:
+            print(f"Erro ao editar mensagem: {e}")
 #
 async def gerar_arquivo_resultados(
     update: Update,
@@ -645,19 +682,19 @@ async def gerar_arquivo_resultados(
 ) -> None:
     """
     Gera e envia o arquivo de resultados completo no mesmo tópico (thread)
-    em que o usuário executou a busca.
+    em que o usuário executou a busca, com um nome de arquivo sanitizado.
     """
     estado     = userbot[user_id]
     chat_id    = estado["chat_id"]
-    thread_id  = estado.get("thread_id")      # ← captura o thread_id
+    thread_id  = estado.get("thread_id")
     resultados = estado["resultados"]
     termo      = estado["termo"]
     user_name  = update.effective_user.username or update.effective_user.first_name
 
-    # Monta o conteúdo do arquivo
+    # Monta o conteúdo do arquivo (lógica existente)
     content  = (
-        f"Resultados obtidos para ~{termo}~, pelo bot https://t.me/GloryLogsBot\n"
-        "---------- by t.me/Prometheust\n\n"
+        f"Resultados obtidos para ~{termo}~, pelo bot https://t.me/{BOT_USERNAME}\n"
+        "by t.me/Prometheust\n\n"
     )
     content += f"Usuário que fez a busca: @{user_name}\n\n"
     content += "-" * 50 + "\n"
@@ -667,18 +704,34 @@ async def gerar_arquivo_resultados(
             url, usr, pwd = partes
             content += f"{url}\n{usr}\n{pwd}\n-\n"
     content += "-" * 50 + "\n"
-    content += "Fim da consulta, continue em t.me/GloryLogsBot\n"
+    content += f"Fim da consulta, continue em t.me/{BOT_USERNAME}\n"
 
     # Cria o arquivo em memória
     file_obj = StringIO()
     file_obj.write(content)
     file_obj.seek(0)
 
-    # Envia o documento no mesmo tópico/chat
+    # --- INÍCIO DA MODIFICAÇÃO ---
+
+    # NOVO: Etapa 1 - Sanitizar o termo da busca para usar como nome de arquivo
+    # Define uma lista de caracteres inválidos em nomes de arquivo
+    invalid_chars = r'<>:"/\|?*'
+    # Substitui cada caractere inválido no termo por um underscore '_'
+    sanitized_termo = termo
+    for char in invalid_chars:
+        sanitized_termo = sanitized_termo.replace(char, '_')
+
+    # NOVO: Etapa 2 - Cria o novo nome de arquivo dinâmico
+    filename = f"{sanitized_termo}-@{BOT_USERNAME}.txt"
+
+    # --- FIM DA MODIFICAÇÃO ---
+
+    # Envia o documento no mesmo tópico/chat com o novo nome de arquivo
     await context.bot.send_document(
         chat_id=chat_id,
-        message_thread_id=thread_id,            # ← envia na thread correta
-        document=InputFile(file_obj, filename="glory-results.txt")
+        message_thread_id=thread_id,
+        # Usa a variável 'filename' que acabamos de criar
+        document=InputFile(file_obj, filename=filename)
     )
 #
 async def broadcast_all(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -702,6 +755,7 @@ async def broadcast_all(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     # monta o reply_markup a partir do próprio texto do comando
     reply_markup = parse_all_buttons(update.message.text or "")
 
+    print("")
     print(f"\033[1;34m   ⟫  SENT MARKETING SHOT 💸\033[m")
 
     msg = update.message.reply_to_message
@@ -724,59 +778,59 @@ async def profile_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     register_chat(update)
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
-
-
-    # Verifica permissão
-    if user_id != ADMIN_USER_ID and not is_user_premium(user_id):
-        await update.message.reply_text(
-            "❌ Você não possui uma assinatura premium ativa.",
-            parse_mode=ParseMode.HTML
-        )
-        return
-
-    check_and_reset_search_limit(user_id)
-    # Recupera dados
-    rec = USERS.get(user_id, {})
-    today = datetime.now(timezone.utc).date()
-    if rec.get("premium") == "y":
-        end_date = datetime.fromisoformat(rec["end-date"]).date()
-        days_left = max((end_date - today).days, 0)
-        premium_status = "Premium"
-        expiration_str = end_date.strftime("%d/%m/%Y")
-    else:
-        days_left = 0
-        premium_status = "FREE > [ Veja Planos ]"
-        expiration_str = "—"
-
-    # NOVO: Pega os dados de limite de busca
-    searches_today = rec.get("searches_today", 0)
-    daily_limit = rec.get("daily_limit", 0)
-    limit_str = 'Ilimitado' if daily_limit >= 99999 else daily_limit
-    
     user_name = update.effective_user.username or update.effective_user.first_name
 
-    mensagem = (
-        f"<blockquote>Olá {user_name}, essa é sua conta:</blockquote>\n\n"
-        ""
-        f"⁝⁝⁝ ID: <code>{user_id}</code>\n"
-        f"⁝⁝⁝ Plano: {premium_status}\n"
-        f"⁝⁝⁝ Dias restantes: {days_left} dias\n"
-        f"⁝⁝⁝ Data de expiração: {expiration_str}\n\n"
-        f"⁝⁝⁝ Buscas hoje: {searches_today} / {limit_str}\n\n"
-        ""
-        f"<blockquote>Use /help para saber como usar o bot</blockquote>"
-    )
+    # Garante que a contagem de buscas do dia esteja atualizada
+    check_and_reset_search_limit(user_id)
+    rec = USERS.get(user_id, {})
 
-    keyboard = [
-        [
-            InlineKeyboardButton("ꜱᴜᴘᴏʀᴛᴇ ᴄᴏᴍ ᴀᴅᴍɪɴ", url="https://t.me/yMusashi"),
-            InlineKeyboardButton("ᴄᴏɴʜᴇᴄᴇʀ ᴘʟᴀɴᴏꜱ", url="https://t.me/yMusashi"),
-        ],
-    ]
+    # --- LÓGICA DE PERFIL DINÂMICO ---
+    if is_user_premium(user_id):
+        # Lógica para usuários PREMIUM
+        today = datetime.now(timezone.utc).date()
+        end_date = datetime.fromisoformat(rec["end-date"]).date()
+        days_left = max((end_date - today).days, 0)
+        premium_status = "Premium ✨"
+        expiration_str = end_date.strftime("%d/%m/%Y")
+        searches_today = rec.get("searches_today", 0)
+        daily_limit = rec.get("daily_limit", 0)
+        limit_str = 'Ilimitado' if daily_limit >= 99999 else daily_limit
+        results_limit_str = "Todos os resultados"
+
+        mensagem = (
+            f"<blockquote>Olá {user_name}, essa é sua conta:</blockquote>\n\n"
+            f"⁝⁝⁝ ID: <code>{user_id}</code>\n"
+            f"⁝⁝⁝ Plano: <b>{premium_status}</b>\n"
+            f"⁝⁝⁝ Dias restantes: {days_left} dias\n"
+            f"⁝⁝⁝ Data de expiração: {expiration_str}\n\n"
+            f"⁝⁝⁝ Buscas hoje: {searches_today} / {limit_str}\n"
+            f"⁝⁝⁝ Resultados por busca: {results_limit_str}\n\n"
+            f"<blockquote>Use /help para saber como usar o bot</blockquote>"
+        )
+        keyboard = [[InlineKeyboardButton("Suporte com Admin", url="https://t.me/yMusashi")]]
+
+    else:
+        # Lógica para usuários FREE
+        premium_status = "Gratuito 🆓"
+        searches_today = rec.get("searches_today", 0)
+        daily_limit = rec.get("daily_limit", 3)
+        results_limit_str = "15 por busca"
+
+        mensagem = (
+            f"<blockquote>Olá {user_name}, essa é sua conta:</blockquote>\n\n"
+            f"⁝⁝⁝ ID: <code>{user_id}</code>\n"
+            f"⁝⁝⁝ Plano: <b>{premium_status}</b>\n\n"
+            f"⁝⁝⁝ Buscas hoje: {searches_today} / {daily_limit}\n"
+            f"⁝⁝⁝ Resultados por busca: {results_limit_str}\n\n"
+            "<blockquote>Faça upgrade para buscas e resultados ilimitados!</blockquote>"
+        )
+        keyboard = [[InlineKeyboardButton("✨ Conhecer Planos Premium", callback_data="show_plans")]]
+
+    # --- FIM DA LÓGICA DINÂMICA ---
+
     reply_markup = InlineKeyboardMarkup(keyboard)
     thread_id = getattr(update.effective_message, "message_thread_id", None)
 
-    # Agora usamos send_photo, não send_message, para enviar o banner + legenda
     with open(profile_banner, "rb") as photo_file:
         await context.bot.send_photo(
             chat_id=chat_id,
@@ -786,3 +840,13 @@ async def profile_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             parse_mode=ParseMode.HTML,
             reply_markup=reply_markup
         )
+# 
+async def plans_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Envia uma nova mensagem com a lista de planos de assinatura."""
+    message_text, reply_markup = get_plans_message_and_keyboard()
+    
+    await update.message.reply_text(
+        text=message_text,
+        reply_markup=reply_markup,
+        parse_mode=ParseMode.HTML
+    )

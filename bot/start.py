@@ -1,7 +1,7 @@
 # bot/start.py
 
 from bot.imports import ApplicationBuilder, CommandHandler, CallbackQueryHandler
-from bot.commands import start, searchlogs, info_command, help_command, add_user, remove_user, broadcast_all, profile_command, invite_command, admin_command 
+from bot.commands import start, searchlogs, info_command, help_command, add_user, remove_user, broadcast_all, profile_command, invite_command, admin_command, plans_command
 from bot.callbacks import callback_query_handler
 from bot.config import telbot
 
@@ -31,6 +31,7 @@ def main():
     app.add_handler(CommandHandler("remove", remove_user))
     app.add_handler(CommandHandler("all", broadcast_all))
     app.add_handler(CommandHandler("profile", profile_command))
+    app.add_handler(CommandHandler("plans", plans_command))
     app.add_handler(CallbackQueryHandler(callback_query_handler))
 
     app.run_polling(drop_pending_updates=True)

@@ -3,7 +3,7 @@
 from bot.imports import ApplicationBuilder, CommandHandler, CallbackQueryHandler
 from bot.commands import start, searchlogs, info_command, help_command, add_user, remove_user, broadcast_all, profile_command, invite_command, admin_command, plans_command
 from bot.callbacks import callback_query_handler
-from bot.config import telbot
+from bot.config import BOT_TOKEN, BOT_USERNAME
 
 def main():
     print("\033[92m\033[0m")
@@ -13,12 +13,12 @@ def main():
     print("\033[92m        │││├┤ │  │  │ ││││├┤   🐦‍🔥\033[0m")
     print("\033[92m        └┴┘└─┘┴─┘└─┘└─┘┴ ┴└─┘\033[0m")
     print("\033[92m\033[0m")
-    print("\033[92m        @GloryLogsBot IS ONLINE...\033[0m")
+    print(f"\033[92m        @{BOT_USERNAME} IS ONLINE...\033[0m")
     print("\033[92m\033[0m")
     print("\033[92m======================================== \033[0m")
     print("\033[92m\033[0m")
     
-    app = ApplicationBuilder().token(telbot).build()
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("admin", admin_command))
     

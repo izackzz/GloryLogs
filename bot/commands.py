@@ -150,7 +150,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     thread_id = getattr(update.effective_message, "message_thread_id", None)
 
-    with open(banner_path, "rb") as photo_file:
+    with open(START_BANNER, "rb") as photo_file:
         await context.bot.send_photo(
             chat_id=update.effective_chat.id,
             message_thread_id=thread_id,
@@ -213,7 +213,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     # captura o thread_id caso seja um tópico em grupo
     thread_id = getattr(update.effective_message, "message_thread_id", None)
 
-    with open(banner_path, "rb") as photo_file:
+    with open(START_BANNER, "rb") as photo_file:
         await context.bot.send_photo(
             chat_id=update.effective_chat.id,
             message_thread_id=thread_id,
@@ -251,7 +251,7 @@ async def info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         and datetime.strptime(rec["end-date"], "%Y-%m-%d").date() >= today
     )
 
-    for root, _, files in os.walk(dirzao):
+    for root, _, files in os.walk(LOGS_PATH):
         for file in files:
             if not file.endswith(".txt"):
                 continue
@@ -560,7 +560,7 @@ async def searchlogs(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     parsed_criteria = parse_search_query(search_query)
     resultados = []
     print(f"\033[1;34m   ⟫  USER {user_id} (Premium: {is_premium}) SEARCHED FOR '{search_query}'\033[m")
-    for root, _, files in os.walk(dirzao):
+    for root, _, files in os.walk(LOGS_PATH):
         for file in files:
             if not file.endswith(".txt"):
                 continue
@@ -831,7 +831,7 @@ async def profile_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     reply_markup = InlineKeyboardMarkup(keyboard)
     thread_id = getattr(update.effective_message, "message_thread_id", None)
 
-    with open(profile_banner, "rb") as photo_file:
+    with open(PROFILE_BANNER, "rb") as photo_file:
         await context.bot.send_photo(
             chat_id=chat_id,
             message_thread_id=thread_id,

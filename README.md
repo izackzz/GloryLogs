@@ -73,8 +73,8 @@ python-telegram-bot==21.3
 
 **a. Clone o Repositório**
 ```bash
-git clone <URL_DO_SEU_REPOSITORIO_GIT>
-cd <NOME_DA_PASTA_DO_PROJETO>
+git clone https://github.com/izackzz/GloryLogs.git
+cd /GloryLogs>
 ````
 
 **b. Crie e Ative um Ambiente Virtual (Recomendado)**
@@ -102,10 +102,10 @@ pip install -r requirements.txt
 
 Esta é a etapa mais importante. Abra o arquivo `bot/config.py` e edite as seguintes variáveis:
 
-  - **`telbot`**: Substitua o token de exemplo pelo token real do seu bot. Você pode obter um com o [@BotFather](https://t.me/BotFather) no Telegram.
+  - **`BOT_TOKEN`**: Substitua o token de exemplo pelo token real do seu bot. Você pode obter um com o [@BotFather](https://t.me/BotFather) no Telegram.
 
     ```python
-    telbot = "7962833687:AAGv8E6p9gC2MSjpRHukV7SeMRiCR6xiaRM" # <-- COLOQUE SEU TOKEN AQUI
+    BOT_TOKEN = "7962833687:AAGv8E6p9gC2MSjpRHukV7SeMRiCR6xiaRM" # <-- COLOQUE SEU TOKEN AQUI
     ```
 
   - **`ADMIN_USER_ID`**: Coloque o seu ID de usuário do Telegram aqui. Para descobrir seu ID, envie `/start` para o bot [@userinfobot](https://t.me/userinfobot).

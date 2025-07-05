@@ -4,3 +4,7 @@
 !/logs/base.txt
 /bot/__pycache__
 /bot/config.py
+
+venv/
+.env
+*.pyc

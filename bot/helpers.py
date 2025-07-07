@@ -3,7 +3,7 @@ from bot.config import *
 
 # ---------- FUNÇÕES SIMPLES DE TRABALHO DO BOT ---------- #
 
-
+# internal/storage/storage.go
 def load_users() -> dict[int, dict]:
     """Carrega o CSV de usuários, criando-o se não existir e tratando novos campos."""
     users: dict[int, dict] = {}
@@ -280,19 +280,20 @@ def get_plans_message_and_keyboard() -> tuple[str, InlineKeyboardMarkup]:
     """
     # Você pode personalizar esta mensagem com os detalhes dos seus planos
     message_text = (
-        "<b>✨ Nossos Planos Premium ✨</b>\n\n"
-        "Desbloqueie todo o potencial do bot com acesso ilimitado e as melhores funcionalidades.\n\n"
-        "<b>Plano Mensal - R$ 25,00</b>\n"
+        "<blockquote>✨ CONHEÇA O PREMIUM ✨</blockquote>\n\n"
+        "⁝⁝⁝ Desbloqueie todo o potencial do bot com acesso ilimitado e as melhores funcionalidades.\n\n"
+        
+        "<blockquote>⁝⁝⁝ <b>Plano Mensal - R$ 25,00</b>\n"
         "✓ Acesso completo por 30 dias\n"
         "✓ Buscas diárias ilimitadas\n"
         "✓ Resultados ilimitados por busca\n"
-        "✓ Suporte prioritário\n\n"
+        "✓ Suporte prioritário</blockquote>\n\n"
         
-        "<b>Plano Trimestral - R$ 60,00</b> (Economize 20%!)\n"
+        "<blockquote>⁝⁝⁝ <b>Plano Trimestral - R$ 60,00</b> (Economize 20%!)\n"
         "✓ Todos os benefícios do plano mensal\n"
-        "✓ Acesso garantido por 90 dias\n\n"
+        "✓ Acesso garantido por 90 dias</blockquote>\n\n"
         
-        "<blockquote>Para adquirir ou tirar dúvidas, fale com um administrador.</blockquote>"
+        "<blockquote>⁝⁝⁝ Para adquirir ou tirar dúvidas, fale com um administrador.</blockquote>"
     )
     
     keyboard = [[InlineKeyboardButton("🛍️ Falar com Administrador", url="https://t.me/yMusashi")]]

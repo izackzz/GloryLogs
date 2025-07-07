@@ -1,7 +1,7 @@
 /old-logs
 /logs/*
-!/logs/base.md
-!/logs/base.txt
+!/logs/@base.md
+!/logs/@base.txt
 /bot/__pycache__
 /bot/config.py
 

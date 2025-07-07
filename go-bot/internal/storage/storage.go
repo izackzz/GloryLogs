@@ -1,31 +1,31 @@
 package storage
 
 import (
-	"bufio"
-	"encoding/csv"
+	"database/sql"
 	"fmt"
-	"log"
+
+	// "log"
 	"os"
-	"strconv"
-	"sync"
+	// "time"
 
 	"github.com/fatih/color"
+	_ "github.com/mattn/go-sqlite3" // Importa o driver do SQLite
 
 	"glorylogs-bot/internal/config"
 )
 
-// User representa a estrutura de dados de um usuário no arquivo users.csv.
+// User representa a estrutura de dados de um usuário (corresponde à tabela 'users')
 type User struct {
 	ID               int64
 	RegistrationDate string
 	EndDate          string
-	Premium          string
+	Premium          string // "y" ou "n"
 	DailyLimit       int
 	SearchesToday    int
 	LastSearchDate   string
 }
 
-// Invite representa a estrutura de dados de um convite no arquivo invites.csv.
+// Invite representa a estrutura de um convite (corresponde à tabela 'invites')
 type Invite struct {
 	Code  string
 	Days  int
@@ -33,235 +33,227 @@ type Invite struct {
 	Used  int
 }
 
-// Storage gerencia todos os dados da aplicação carregados em memória.
-// Ele usa mutex para garantir o acesso seguro aos dados em ambientes concorrentes.
+// Storage agora gerencia a conexão com o banco de dados.
 type Storage struct {
-	mu      sync.RWMutex
-	Users   map[int64]*User
-	Invites map[string]*Invite
-	Chats   map[int64]bool
+	DB *sql.DB
 }
 
-// NewStorage cria e inicializa uma nova instância de Storage, carregando todos os dados.
-func NewStorage() *Storage {
-	s := &Storage{
-		Users:   make(map[int64]*User),
-		Invites: make(map[string]*Invite),
-		Chats:   make(map[int64]bool),
+// NewStorage inicializa a conexão com o banco de dados e cria as tabelas se não existirem.
+func NewStorage() (*Storage, error) {
+	// Garante que o diretório db/ exista
+	if err := os.MkdirAll("db", 0755); err != nil {
+		return nil, fmt.Errorf("falha ao criar diretório db: %w", err)
 	}
-	s.loadUsers()
-	s.loadInvites()
-	s.loadChats()
-	return s
+
+	db, err := sql.Open("sqlite3", config.DBPath)
+	if err != nil {
+		return nil, fmt.Errorf("falha ao abrir o banco de dados: %w", err)
+	}
+
+	storage := &Storage{DB: db}
+	if err := storage.initTables(); err != nil {
+		return nil, fmt.Errorf("falha ao inicializar tabelas: %w", err)
+	}
+
+	color.Green("   ⟫  CONEXÃO COM BANCO DE DADOS SQLITE ESTABELECIDA COM SUCESSO")
+	return storage, nil
 }
 
-// Lock bloqueia o mutex para escrita.
-func (s *Storage) Lock() {
-	s.mu.Lock()
+// initTables cria as tabelas necessárias no banco de dados.
+func (s *Storage) initTables() error {
+	// Tabela de Usuários
+	usersTableSQL := `
+	CREATE TABLE IF NOT EXISTS users (
+		id INTEGER PRIMARY KEY,
+		registration_date TEXT,
+		end_date TEXT,
+		premium TEXT,
+		daily_limit INTEGER,
+		searches_today INTEGER,
+		last_search_date TEXT
+	);`
+	if _, err := s.DB.Exec(usersTableSQL); err != nil {
+		return err
+	}
+
+	// Tabela de Convites
+	invitesTableSQL := `
+	CREATE TABLE IF NOT EXISTS invites (
+		code TEXT PRIMARY KEY,
+		days INTEGER,
+		max_uses INTEGER,
+		used_count INTEGER
+	);`
+	if _, err := s.DB.Exec(invitesTableSQL); err != nil {
+		return err
+	}
+
+	// Tabela de Chats para Broadcast
+	chatsTableSQL := `CREATE TABLE IF NOT EXISTS chats (id INTEGER PRIMARY KEY);`
+	if _, err := s.DB.Exec(chatsTableSQL); err != nil {
+		return err
+	}
+
+	// --- NOVA TABELA ---
+	// Tabela de Configurações para armazenar o ID do canal do terminal e outras futuras configs.
+	settingsTableSQL := `
+	CREATE TABLE IF NOT EXISTS settings (
+		key TEXT PRIMARY KEY,
+		value TEXT
+	);`
+	_, err := s.DB.Exec(settingsTableSQL)
+	return err
 }
 
-// Unlock desbloqueia o mutex de escrita.
-func (s *Storage) Unlock() {
-	s.mu.Unlock()
+// Close fecha a conexão com o banco de dados.
+func (s *Storage) Close() {
+	s.DB.Close()
 }
 
-// RLock bloqueia o mutex para leitura.
-func (s *Storage) RLock() {
-	s.mu.RLock()
+// --- MÉTODOS PARA GERENCIAR USUÁRIOS ---
+
+func (s *Storage) GetUser(userID int64) (*User, error) {
+	user := &User{}
+	query := `SELECT id, registration_date, end_date, premium, daily_limit, searches_today, last_search_date FROM users WHERE id = ?`
+
+	row := s.DB.QueryRow(query, userID)
+	err := row.Scan(&user.ID, &user.RegistrationDate, &user.EndDate, &user.Premium, &user.DailyLimit, &user.SearchesToday, &user.LastSearchDate)
+
+	if err == sql.ErrNoRows {
+		return nil, nil // Retorna nil se o usuário não for encontrado, não é um erro
+	}
+	return user, err
 }
 
-// RUnlock desbloqueia o mutex de leitura.
-func (s *Storage) RUnlock() {
-	s.mu.RUnlock()
+func (s *Storage) AddOrUpdateUser(user *User) error {
+	query := `
+	INSERT INTO users (id, registration_date, end_date, premium, daily_limit, searches_today, last_search_date)
+	VALUES (?, ?, ?, ?, ?, ?, ?)
+	ON CONFLICT(id) DO UPDATE SET
+		registration_date = excluded.registration_date,
+		end_date = excluded.end_date,
+		premium = excluded.premium,
+		daily_limit = excluded.daily_limit,
+		searches_today = excluded.searches_today,
+		last_search_date = excluded.last_search_date;
+	`
+	_, err := s.DB.Exec(query, user.ID, user.RegistrationDate, user.EndDate, user.Premium, user.DailyLimit, user.SearchesToday, user.LastSearchDate)
+	return err
 }
 
-// ensureFileExists verifica se um arquivo existe e o cria com um cabeçalho se não existir.
-func ensureFileExists(filePath string, header []string) error {
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		color.Green("   ⟫  FILE %s NOT FOUND, CREATING...", filePath)
-		file, err := os.Create(filePath)
+func (s *Storage) RemoveUser(userID int64) error {
+	query := `DELETE FROM users WHERE id = ?`
+	_, err := s.DB.Exec(query, userID)
+	return err
+}
+
+func (s *Storage) GetAllUsers() ([]*User, error) {
+	query := `SELECT id, registration_date, end_date, premium, daily_limit, searches_today, last_search_date FROM users ORDER BY id`
+	rows, err := s.DB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []*User
+	for rows.Next() {
+		user := &User{}
+		err := rows.Scan(&user.ID, &user.RegistrationDate, &user.EndDate, &user.Premium, &user.DailyLimit, &user.SearchesToday, &user.LastSearchDate)
 		if err != nil {
-			return fmt.Errorf("falha ao criar arquivo %s: %w", filePath, err)
+			return nil, err
 		}
-		defer file.Close()
-
-		writer := csv.NewWriter(file)
-		if err := writer.Write(header); err != nil {
-			return fmt.Errorf("falha ao escrever cabeçalho em %s: %w", filePath, err)
-		}
-		writer.Flush()
-		color.Green("   ⟫  FILE %s CREATED WITH SUCCESS...", filePath)
+		users = append(users, user)
 	}
-	return nil
+	return users, nil
 }
 
-// --- Funções de Usuários ---
+// --- MÉTODOS PARA GERENCIAR CONVITES ---
 
-func (s *Storage) loadUsers() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *Storage) GetInvite(code string) (*Invite, error) {
+	invite := &Invite{}
+	query := `SELECT code, days, max_uses, used_count FROM invites WHERE code = ?`
 
-	if err := ensureFileExists(config.UsersCSV, config.UserFieldnames); err != nil {
-		log.Fatalf("Erro ao garantir a existência do arquivo de usuários: %v", err)
+	row := s.DB.QueryRow(query, code)
+	err := row.Scan(&invite.Code, &invite.Days, &invite.Limit, &invite.Used)
+
+	if err == sql.ErrNoRows {
+		return nil, nil // Convite não encontrado
 	}
-
-	file, err := os.Open(config.UsersCSV)
-	if err != nil {
-		log.Fatalf("Erro ao abrir o arquivo de usuários: %v", err)
-	}
-	defer file.Close()
-
-	reader := csv.NewReader(file)
-	reader.Read() // Pula o cabeçalho
-
-	records, err := reader.ReadAll()
-	if err != nil {
-		log.Fatalf("Erro ao ler registros do CSV de usuários: %v", err)
-	}
-
-	for _, record := range records {
-		id, _ := strconv.ParseInt(record[0], 10, 64)
-		dailyLimit, _ := strconv.Atoi(record[4])
-		searchesToday, _ := strconv.Atoi(record[5])
-
-		s.Users[id] = &User{
-			ID:               id,
-			RegistrationDate: record[1],
-			EndDate:          record[2],
-			Premium:          record[3],
-			DailyLimit:       dailyLimit,
-			SearchesToday:    searchesToday,
-			LastSearchDate:   record[6],
-		}
-	}
-	color.Green("   ⟫  LOADED %d USERS...", len(s.Users))
+	return invite, err
 }
 
-func (s *Storage) SaveUsers() {
-	// A trava (lock) foi removida daqui. A função que chama SaveUsers é responsável por travar.
-	file, err := os.Create(config.UsersCSV)
-	if err != nil {
-		color.Red("   ⟫  ERRO AO SALVAR ARQUIVO DE USUÁRIOS: %v", err)
-		return
-	}
-	defer file.Close()
-
-	writer := csv.NewWriter(file)
-	writer.Write(config.UserFieldnames)
-
-	for _, user := range s.Users {
-		record := []string{
-			strconv.FormatInt(user.ID, 10),
-			user.RegistrationDate,
-			user.EndDate,
-			user.Premium,
-			strconv.Itoa(user.DailyLimit),
-			strconv.Itoa(user.SearchesToday),
-			user.LastSearchDate,
-		}
-		writer.Write(record)
-	}
-	writer.Flush()
+func (s *Storage) AddInvite(invite *Invite) error {
+	query := `INSERT INTO invites (code, days, max_uses, used_count) VALUES (?, ?, ?, ?)`
+	_, err := s.DB.Exec(query, invite.Code, invite.Days, invite.Limit, invite.Used)
+	return err
 }
 
-// --- Funções de Convites ---
-
-func (s *Storage) loadInvites() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if err := ensureFileExists(config.InvitesCSV, config.InviteFieldnames); err != nil {
-		log.Fatalf("Erro ao garantir a existência do arquivo de convites: %v", err)
-	}
-
-	file, err := os.Open(config.InvitesCSV)
-	if err != nil {
-		log.Fatalf("Erro ao abrir arquivo de convites: %v", err)
-	}
-	defer file.Close()
-
-	reader := csv.NewReader(file)
-	reader.Read() // Pula cabeçalho
-
-	records, err := reader.ReadAll()
-	if err != nil {
-		log.Fatalf("Erro ao ler registros do CSV de convites: %v", err)
-	}
-
-	for _, record := range records {
-		days, _ := strconv.Atoi(record[1])
-		limit, _ := strconv.Atoi(record[2])
-		used, _ := strconv.Atoi(record[3])
-
-		invite := &Invite{
-			Code:  record[0],
-			Days:  days,
-			Limit: limit,
-			Used:  used,
-		}
-		s.Invites[invite.Code] = invite
-	}
-	color.Green("   ⟫  LOADED %d INVITES...", len(s.Invites))
+func (s *Storage) IncrementInviteUsage(code string) error {
+	query := `UPDATE invites SET used_count = used_count + 1 WHERE code = ?`
+	_, err := s.DB.Exec(query, code)
+	return err
 }
 
-func (s *Storage) SaveInvites() {
-	// A trava (lock) foi removida daqui.
-	file, err := os.Create(config.InvitesCSV)
+func (s *Storage) GetAllInvites() ([]*Invite, error) {
+	query := `SELECT code, days, max_uses, used_count FROM invites ORDER BY code`
+	rows, err := s.DB.Query(query)
 	if err != nil {
-		color.Red("   ⟫  ERRO AO SALVAR ARQUIVO DE CONVITES: %v", err)
-		return
+		return nil, err
 	}
-	defer file.Close()
+	defer rows.Close()
 
-	writer := csv.NewWriter(file)
-	writer.Write(config.InviteFieldnames)
-
-	for _, invite := range s.Invites {
-		record := []string{
-			invite.Code,
-			strconv.Itoa(invite.Days),
-			strconv.Itoa(invite.Limit),
-			strconv.Itoa(invite.Used),
+	var invites []*Invite
+	for rows.Next() {
+		invite := &Invite{}
+		err := rows.Scan(&invite.Code, &invite.Days, &invite.Limit, &invite.Used)
+		if err != nil {
+			return nil, err
 		}
-		writer.Write(record)
+		invites = append(invites, invite)
 	}
-	writer.Flush()
+	return invites, nil
 }
 
-// --- Funções de Chats ---
+// --- MÉTODOS PARA GERENCIAR CHATS (BROADCAST) ---
 
-func (s *Storage) loadChats() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	file, err := os.OpenFile(config.ChatsFile, os.O_RDONLY|os.O_CREATE, 0666)
-	if err != nil {
-		log.Fatalf("Erro ao abrir ou criar o arquivo de chats: %v", err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if id, err := strconv.ParseInt(line, 10, 64); err == nil {
-			s.Chats[id] = true
-		}
-	}
-	color.Green("   ⟫  LOADED %d CHATS...", len(s.Chats))
+func (s *Storage) AddChat(chatID int64) error {
+	// ON CONFLICT DO NOTHING ignora o erro se o chatID já existir, que é o que queremos.
+	query := `INSERT INTO chats (id) VALUES (?) ON CONFLICT(id) DO NOTHING`
+	_, err := s.DB.Exec(query, chatID)
+	return err
 }
 
-func (s *Storage) SaveChats() {
-	// A trava (lock) foi removida daqui.
-	file, err := os.Create(config.ChatsFile)
+func (s *Storage) GetAllChatIDs() ([]int64, error) {
+	query := `SELECT id FROM chats`
+	rows, err := s.DB.Query(query)
 	if err != nil {
-		color.Red("   ⟫  ERRO AO SALVAR ARQUIVO DE CHATS: %v", err)
-		return
+		return nil, err
 	}
-	defer file.Close()
+	defer rows.Close()
 
-	writer := bufio.NewWriter(file)
-	for id := range s.Chats {
-		fmt.Fprintln(writer, id)
+	var chatIDs []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		chatIDs = append(chatIDs, id)
 	}
-	writer.Flush()
+	return chatIDs, nil
+}
+
+func (s *Storage) SetSetting(key, value string) error {
+	query := `INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value;`
+	_, err := s.DB.Exec(query, key, value)
+	return err
+}
+
+func (s *Storage) GetSetting(key string) (string, error) {
+	var value string
+	query := `SELECT value FROM settings WHERE key = ?`
+	err := s.DB.QueryRow(query, key).Scan(&value)
+	if err == sql.ErrNoRows {
+		return "", nil // Chave não encontrada, retorna string vazia sem erro
+	}
+	return value, err
 }

@@ -28,8 +28,8 @@ type lineData struct {
 // searchRegex é a expressão regular para analisar a query de busca.
 var searchRegex = regexp.MustCompile(`(?P<operator>inurl:|intext:|site:|filetype:)?(?P<term>"[^"]+"|\S+)`)
 
-// parseSearchQuery analisa a string de busca do usuário e a converte em uma lista de critérios.
-func parseSearchQuery(query string) []Criterion {
+// ParseSearchQuery analisa a string de busca do usuário e a converte em uma lista de critérios.
+func ParseSearchQuery(query string) []Criterion {
 	criteria := []Criterion{}
 	matches := searchRegex.FindAllStringSubmatch(query, -1)
 
@@ -81,8 +81,8 @@ func extractDomain(rawURL string) string {
 	return parsedURL.Hostname()
 }
 
-// lineMatchesCriteria verifica se uma linha de log corresponde a todos os critérios de busca.
-func lineMatchesCriteria(data *lineData, criteria []Criterion) bool {
+// LineMatchesCriteria verifica se uma linha de log corresponde a todos os critérios de busca.
+func LineMatchesCriteria(data *lineData, criteria []Criterion) bool {
 	urlLower := strings.ToLower(data.URL)
 	userLower := strings.ToLower(data.User)
 	passLower := strings.ToLower(data.Password)
@@ -124,9 +124,9 @@ func lineMatchesCriteria(data *lineData, criteria []Criterion) bool {
 // Search executa a busca na pasta de logs com base na query fornecida.
 func Search(query string) []string {
 
-	log.Println("-> Iniciando busca nos arquivos...")
+	// log.Println("-> Iniciando busca nos arquivos...")
 
-	criteria := parseSearchQuery(query)
+	criteria := ParseSearchQuery(query)
 	if len(criteria) == 0 {
 		return []string{} // Retorna vazio se a query for vazia ou inválida
 	}
@@ -142,7 +142,7 @@ func Search(query string) []string {
 			file, err := os.Open(path)
 			if err != nil {
 
-				log.Printf("... Processando arquivo: %s", path)
+				// log.Printf("... Processando arquivo: %s", path)
 
 				log.Printf("Aviso: Não foi possível abrir o arquivo %s: %v", path, err)
 				return nil // Continua para o próximo arquivo
@@ -153,7 +153,7 @@ func Search(query string) []string {
 			for scanner.Scan() {
 				line := scanner.Text()
 				lineData := ParseLine(line)
-				if lineData != nil && lineMatchesCriteria(lineData, criteria) {
+				if lineData != nil && LineMatchesCriteria(lineData, criteria) {
 					results = append(results, line)
 				}
 			}
@@ -168,7 +168,7 @@ func Search(query string) []string {
 		log.Printf("Erro ao percorrer a pasta de logs: %v", err)
 	}
 
-	log.Printf("-> Busca finalizada. Encontrados %d resultados.", len(results))
+	// log.Printf("-> Busca finalizada. Encontrados %d resultados.", len(results))
 
 	return results
 }

@@ -7,6 +7,7 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN_ENV")
 ADMIN_USER_ID = os.getenv("ADMIN_USER_ID_ENV")
 BOT_USERNAME = os.getenv("BOT_USERNAME_ENV")
+ADMIN_MENTION = os.getenv("ADMIN_MENTION_ENV")
 
 if not BOT_TOKEN or not ADMIN_USER_ID:
     raise ValueError("Erro: BOT_TOKEN_ENV e ADMIN_USER_ID_ENV devem ser definidos no arquivo .env")

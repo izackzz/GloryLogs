@@ -128,7 +128,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     mensagem = (
         f"Olá {user_name}, seja bem-vindo!\n\n"
         "<blockquote>Sou o Bot de consultas 𝐆𝐋𝐎𝐑𝐘 𝐋𝐎𝐆𝐒 👁‍🗨!</blockquote>\n"
-        "<i><b>by</b> @Prometheust</i>\n\n"
+        f"<i><b>by</b> @{ADMIN_MENTION}</i>\n\n"
         "🔍 Para realizar uma consulta, utilize o comando:\n"
         "<b>/search &lt;sua_busca&gt;</b>\n\n"
         "ℹ️ Utilize os operadores de busca avançada para refinar seus resultados:\n\n"
@@ -172,7 +172,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     and not is_chat_premium(chat_id)
     ):
         await update.message.reply_text(
-            "<blockquote>❌ VOCÊ NÃO TEM PERMISSÃO SUFICIENTE PARA USAR ESSE BOT, ENTRE EM CONTATO COM @Prometheust</blockquote>",
+            f"<blockquote>❌ VOCÊ NÃO TEM PERMISSÃO SUFICIENTE PARA USAR ESSE BOT, ENTRE EM CONTATO COM @{ADMIN_MENTION}</blockquote>",
             parse_mode=ParseMode.HTML
         )
         return
@@ -192,7 +192,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "<blockquote>➡️ Use as setas de navegação para ver mais resultados durante a pesquisa.</blockquote>\n\n"
         "<blockquote>⏬🗂️ Faça download do resultado completo da busca.</blockquote>\n\n"
         ""
-        # "<i>👤 Qualquer dúvida, entre em contato com @Prometheust</i>"
+        # "<i>👤 Qualquer dúvida, entre em contato com @{ADMIN_MENTION}</i>"
     )
     keyboard = [
         # Linha 1: dois botões lado a lado
@@ -234,7 +234,7 @@ async def info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     and not is_chat_premium(chat_id)
 ):
         await update.message.reply_text(
-            "<blockquote>❌ VOCÊ NÃO TEM PERMISSÃO SUFICIENTE PARA USAR ESSE BOT, ENTRE EM CONTATO COM @Prometheust</blockquote>",
+            f"<blockquote>❌ VOCÊ NÃO TEM PERMISSÃO SUFICIENTE PARA USAR ESSE BOT, ENTRE EM CONTATO COM @{ADMIN_MENTION}</blockquote>",
             parse_mode=ParseMode.HTML
         )
         return
@@ -305,7 +305,7 @@ async def info_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         text=mensagem,
         parse_mode=ParseMode.HTML,
     )
-#
+################
 async def add_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     /add:
@@ -428,6 +428,7 @@ async def remove_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     
     # MODIFICADO: Usa a variável 'escopo' na mensagem final
     await update.message.reply_text(f"✅ {escopo} `{target_id_to_remove}` removido da base de assinantes.")#
+#
 async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Exibe um painel de ajuda completo exclusivo para o administrador."""
     # Etapa 1: Garante que apenas o administrador pode usar este comando
@@ -471,10 +472,6 @@ async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     # Etapa 3: Envia a mensagem para o administrador
     await update.message.reply_text(admin_help_text, parse_mode=ParseMode.HTML)
 #
-# Em commands.py
-
-# Em commands.py
-
 async def enviar_pagina_free(
     context: ContextTypes.DEFAULT_TYPE,
     user_id: int,
@@ -523,7 +520,7 @@ async def enviar_pagina_free(
             pass
         else:
             print(f"Erro ao editar mensagem (free): {e}")
-# 
+##################
 async def searchlogs(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handler do /search que diferencia a lógica para planos Premium e Free."""
     register_chat(update)
@@ -609,6 +606,7 @@ async def searchlogs(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
             "message_id": loading_message.message_id, "chat_id": chat_id, "thread_id": thread_id,
         }
         await enviar_pagina_free(context, user_id, total_original)#
+# 
 async def enviar_pagina(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -694,7 +692,7 @@ async def gerar_arquivo_resultados(
     # Monta o conteúdo do arquivo (lógica existente)
     content  = (
         f"Resultados obtidos para ~{termo}~, pelo bot https://t.me/{BOT_USERNAME}\n"
-        "by t.me/Prometheust\n\n"
+        f"by t.me/{ADMIN_MENTION}\n\n"
     )
     content += f"Usuário que fez a busca: @{user_name}\n\n"
     content += "-" * 50 + "\n"
@@ -733,7 +731,7 @@ async def gerar_arquivo_resultados(
         # Usa a variável 'filename' que acabamos de criar
         document=InputFile(file_obj, filename=filename)
     )
-#
+###################
 async def broadcast_all(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
     /all — responda a uma mensagem com /all seguido das definições
@@ -840,7 +838,7 @@ async def profile_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             parse_mode=ParseMode.HTML,
             reply_markup=reply_markup
         )
-# 
+#
 async def plans_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Envia uma nova mensagem com a lista de planos de assinatura."""
     message_text, reply_markup = get_plans_message_and_keyboard()
